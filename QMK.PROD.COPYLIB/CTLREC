@@ -1,0 +1,10 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * ACCRUAL RESULT WITH RUNNING CONTROL TOTAL (35 BYTES)            00000300
+       01  CTL-REC.                                                     00000400
+           05  CTL-ACCT-ID             PIC X(10).                       00000500
+           05  CTL-INTEREST            PIC S9(7)V99                     00000600
+                                       SIGN LEADING SEPARATE.           00000700
+           05  CTL-RUN-TOTAL           PIC S9(11)V99                    00000800
+                                       SIGN LEADING SEPARATE.           00000900
+           05  CTL-FLAG                PIC X.                           00001000

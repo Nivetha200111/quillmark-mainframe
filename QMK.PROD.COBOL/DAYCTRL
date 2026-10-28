@@ -1,0 +1,107 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * DAYCTRL - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   DAILY INTEREST ACCRUAL WITH A RUNNING CONTROL TOTAL FOR THE   00000500
+      *   GENERAL LEDGER RECONCILIATION (DD DAYIN -> DD CTLOUT).        00000600
+      *   EACH ACCOUNT'S INTEREST IS ROUNDED BEFORE IT IS ADDED, SO THE 00000700
+      *   CONTROL TOTAL EQUALS THE SUM OF THE POSTED AMOUNTS.           00000800
+      * CHANGE HISTORY (FICTIONAL)                                      00000900
+      *   1997-09-15 KTB  INITIAL VERSION                               00001000
+      *   2000-03-01 KTB  LEAP-DAY RECONCILIATION FIX: ROUND PER RECORD 00001100
+      *   2005-10-24 JWE  FLAG ACCRUALS LOST TO ROUNDING                00001200
+      *---------------------------------------------------------------- 00001300
+       IDENTIFICATION DIVISION.                                         00001400
+       PROGRAM-ID. DAYCTRL.                                             00001500
+       ENVIRONMENT DIVISION.                                            00001600
+       INPUT-OUTPUT SECTION.                                            00001700
+       FILE-CONTROL.                                                    00001800
+           SELECT DAY-FILE ASSIGN TO DAYIN                              00001900
+               ORGANIZATION IS SEQUENTIAL                               00002000
+               FILE STATUS IS WS-DAY-STATUS.                            00002100
+           SELECT CTL-FILE ASSIGN TO CTLOUT                             00002200
+               ORGANIZATION IS SEQUENTIAL                               00002300
+               FILE STATUS IS WS-CTL-STATUS.                            00002400
+       DATA DIVISION.                                                   00002500
+       FILE SECTION.                                                    00002600
+       FD  DAY-FILE                                                     00002700
+           RECORDING MODE IS F                                          00002800
+           BLOCK CONTAINS 0 RECORDS                                     00002900
+           LABEL RECORDS ARE STANDARD.                                  00003000
+       COPY DAYREC.                                                     00003100
+       FD  CTL-FILE                                                     00003200
+           RECORDING MODE IS F                                          00003300
+           BLOCK CONTAINS 0 RECORDS                                     00003400
+           LABEL RECORDS ARE STANDARD.                                  00003500
+       COPY CTLREC.                                                     00003600
+       WORKING-STORAGE SECTION.                                         00003700
+       01  WS-DAY-STATUS               PIC XX.                          00003800
+       01  WS-CTL-STATUS               PIC XX.                          00003900
+       01  WS-EOF-FLAG                 PIC X VALUE 'N'.                 00004000
+           88  END-OF-ACCOUNTS         VALUE 'Y'.                       00004100
+       01  WS-INTEREST                 PIC S9(7)V99 COMP-3.             00004200
+       01  WS-CTL-TOTAL                PIC S9(11)V99 COMP-3 VALUE 0.    00004300
+       01  WS-CTL-EDIT                 PIC -(11)9.99.                   00004400
+       01  WS-COUNTERS.                                                 00004500
+           05  WS-READ-CNT             PIC 9(7) COMP VALUE 0.           00004600
+           05  WS-LOST-CNT             PIC 9(7) COMP VALUE 0.           00004700
+       PROCEDURE DIVISION.                                              00004800
+       0000-MAIN.                                                       00004900
+           PERFORM 1000-INIT                                            00005000
+           PERFORM 2000-PROCESS UNTIL END-OF-ACCOUNTS                   00005100
+           PERFORM 9000-TERM                                            00005200
+           STOP RUN.                                                    00005300
+                                                                        00005400
+       1000-INIT.                                                       00005500
+           OPEN INPUT DAY-FILE                                          00005600
+           IF WS-DAY-STATUS NOT = '00'                                  00005700
+               DISPLAY 'DAYCTRL OPEN DAYIN FAILED ' WS-DAY-STATUS       00005800
+               MOVE 16 TO RETURN-CODE                                   00005900
+               STOP RUN                                                 00006000
+           END-IF                                                       00006100
+           OPEN OUTPUT CTL-FILE                                         00006200
+           IF WS-CTL-STATUS NOT = '00'                                  00006300
+               DISPLAY 'DAYCTRL OPEN CTLOUT FAILED ' WS-CTL-STATUS      00006400
+               MOVE 16 TO RETURN-CODE                                   00006500
+               STOP RUN                                                 00006600
+           END-IF                                                       00006700
+           PERFORM 8000-READ.                                           00006800
+                                                                        00006900
+       2000-PROCESS.                                                    00007000
+           ADD 1 TO WS-READ-CNT                                         00007100
+           PERFORM 3000-ACCRUE                                          00007200
+           PERFORM 5000-WRITE-RESULT                                    00007300
+           PERFORM 8000-READ.                                           00007400
+                                                                        00007500
+      * SIMPLE INTEREST, ACTUAL/365, ROUNDED PER ACCOUNT. OVERDRAWN     00007600
+      * PRINCIPALS ACCRUE NEGATIVE INTEREST AT THE SAME RATE.           00007700
+       3000-ACCRUE.                                                     00007800
+           COMPUTE WS-INTEREST ROUNDED =                                00007900
+               DAY-PRINCIPAL * DAY-RATE * DAY-DAYS / 365                00008000
+           ADD WS-INTEREST TO WS-CTL-TOTAL                              00008100
+           IF WS-INTEREST = ZERO AND DAY-PRINCIPAL NOT = ZERO           00008200
+              AND DAY-RATE NOT = ZERO AND DAY-DAYS NOT = ZERO           00008300
+               MOVE 'Z' TO CTL-FLAG                                     00008400
+               ADD 1 TO WS-LOST-CNT                                     00008500
+           ELSE                                                         00008600
+               MOVE '-' TO CTL-FLAG                                     00008700
+           END-IF.                                                      00008800
+                                                                        00008900
+       5000-WRITE-RESULT.                                               00009000
+           MOVE DAY-ACCT-ID  TO CTL-ACCT-ID                             00009100
+           MOVE WS-INTEREST  TO CTL-INTEREST                            00009200
+           MOVE WS-CTL-TOTAL TO CTL-RUN-TOTAL                           00009300
+           WRITE CTL-REC.                                               00009400
+                                                                        00009500
+       8000-READ.                                                       00009600
+           READ DAY-FILE                                                00009700
+               AT END                                                   00009800
+                   SET END-OF-ACCOUNTS TO TRUE                          00009900
+           END-READ.                                                    00010000
+                                                                        00010100
+       9000-TERM.                                                       00010200
+           CLOSE DAY-FILE CTL-FILE                                      00010300
+           MOVE WS-CTL-TOTAL TO WS-CTL-EDIT                             00010400
+           DISPLAY 'DAYCTRL ACCOUNTS=' WS-READ-CNT                      00010500
+                   ' LOST=' WS-LOST-CNT                                 00010600
+                   ' CONTROL=' WS-CTL-EDIT.                             00010700

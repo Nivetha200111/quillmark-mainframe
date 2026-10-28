@@ -1,0 +1,14 @@
+//* SYNTHETIC SAMPLE - written for the Diocle hackathon project.
+//* Fictional company. Not derived from any real system.
+//QMKCTL   PROC ENV=PROD,GEN=+1
+//*-------------------------------------------------------------------
+//* DAILY INTEREST GENERAL LEDGER CONTROL TOTAL
+//*-------------------------------------------------------------------
+//CTL010   EXEC PGM=DAYCTRL
+//STEPLIB  DD DSN=QMK.&ENV..LOADLIB,DISP=SHR
+//DAYIN    DD DSN=QMK.&ENV..ACCT.PRINCIPAL.DAILY,DISP=SHR
+//CTLOUT   DD DSN=QMK.&ENV..GL.CONTROL(&GEN),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(TRK,(20,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=35,BLKSIZE=0)
+//SYSOUT   DD SYSOUT=*

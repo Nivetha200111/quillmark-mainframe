@@ -1,0 +1,5 @@
+//* SYNTHETIC SAMPLE - written for the Diocle hackathon project.
+//* Fictional company. Not derived from any real system.
+//QMKD020  JOB (QMK0001),'PAYMENT POSTING',CLASS=A,MSGCLASS=X,
+//             NOTIFY=&SYSUID
+//POST010  EXEC QMKPOST,ENV=PROD

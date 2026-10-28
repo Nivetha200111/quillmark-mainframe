@@ -1,0 +1,11 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * CUSTOMER CHANGE REQUEST (LRECL 42)                              00000300
+       01  CHG-REC.                                                     00000400
+           05  CHG-CUST-ID             PIC X(8).                        00000500
+           05  CHG-ACTION              PIC X.                           00000600
+               88  CHG-RENAME          VALUE 'N'.                       00000700
+               88  CHG-RESEGMENT       VALUE 'S'.                       00000800
+           05  CHG-NAME                PIC X(30).                       00000900
+           05  CHG-SEGMENT             PIC X(2).                        00001000
+           05  FILLER                  PIC X.                           00001100

@@ -1,0 +1,11 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * ACCOUNT MASTER EXTRACT RECORD (31 BYTES)                        00000300
+       01  ACCT-REC.                                                    00000400
+           05  ACCT-ID                 PIC X(10).                       00000500
+           05  ACCT-BALANCE            PIC S9(9)V99                     00000600
+                                       SIGN LEADING SEPARATE.           00000700
+           05  ACCT-RATE               PIC 9V9(4).                      00000800
+           05  ACCT-DAYS               PIC 9(3).                        00000900
+           05  ACCT-TIER               PIC X.                           00001000
+               88  ACCT-TIER-PREMIUM   VALUE 'P'.                       00001100

@@ -1,0 +1,11 @@
+//* SYNTHETIC SAMPLE - written for the Diocle hackathon project.
+//* Fictional company. Not derived from any real system.
+//QMKPOST  PROC ENV=PROD,GEN=+1
+//POST010  EXEC PGM=TXNPOST
+//STEPLIB  DD DSN=QMK.&ENV..LOADLIB,DISP=SHR
+//TXNIN    DD DSN=QMK.&ENV..TXN.PENDING,DISP=SHR
+//POSTOUT  DD DSN=QMK.&ENV..TXN.POSTED(&GEN),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(TRK,(50,10),RLSE),
+//            DCB=(RECFM=FB,LRECL=29,BLKSIZE=0)
+//SYSOUT   DD SYSOUT=*

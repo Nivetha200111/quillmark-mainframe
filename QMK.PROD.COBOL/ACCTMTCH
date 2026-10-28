@@ -1,0 +1,141 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * ACCTMTCH - QUILLMARK TRUST & SAVINGS (FICTIONAL)                00000400
+      *   CLASSIC SEQUENTIAL MATCH-MERGE: APPLIES THE DAY'S SORTED      00000500
+      *   TRANSACTIONS (DD TXNIN) TO THE SORTED ACCOUNT MASTER (DD      00000600
+      *   MSTIN), WRITES THE NEW MASTER (DD NEWMST) AND AN EXCEPTION    00000700
+      *   REPORT (DD EXCOUT) FOR UNKNOWN ACCOUNTS, FROZEN ACCOUNTS AND  00000800
+      *   UNKNOWN TRANSACTION TYPES.                                    00000900
+      * CHANGE HISTORY (FICTIONAL)                                      00001000
+      *   1991-04-08 HBK  INITIAL VERSION                               00001100
+      *   1996-10-21 HBK  FROZEN ACCOUNTS REJECT TRANSACTIONS           00001200
+      *   2001-03-05 SDV  RETURN CODE 4 WHEN ANY EXCEPTION IS WRITTEN   00001300
+      *---------------------------------------------------------------- 00001400
+       IDENTIFICATION DIVISION.                                         00001500
+       PROGRAM-ID. ACCTMTCH.                                            00001600
+       ENVIRONMENT DIVISION.                                            00001700
+       INPUT-OUTPUT SECTION.                                            00001800
+       FILE-CONTROL.                                                    00001900
+           SELECT MST-FILE ASSIGN TO MSTIN                              00002000
+               ORGANIZATION IS SEQUENTIAL.                              00002100
+           SELECT TXN-FILE ASSIGN TO TXNIN                              00002200
+               ORGANIZATION IS SEQUENTIAL.                              00002300
+           SELECT NEW-FILE ASSIGN TO NEWMST                             00002400
+               ORGANIZATION IS SEQUENTIAL.                              00002500
+           SELECT EXC-FILE ASSIGN TO EXCOUT                             00002600
+               ORGANIZATION IS SEQUENTIAL.                              00002700
+       DATA DIVISION.                                                   00002800
+       FILE SECTION.                                                    00002900
+       FD  MST-FILE                                                     00003000
+           RECORDING MODE IS F                                          00003100
+           BLOCK CONTAINS 0 RECORDS                                     00003200
+           LABEL RECORDS ARE STANDARD.                                  00003300
+       COPY MSTREC.                                                     00003400
+       FD  TXN-FILE                                                     00003500
+           RECORDING MODE IS F                                          00003600
+           BLOCK CONTAINS 0 RECORDS                                     00003700
+           LABEL RECORDS ARE STANDARD.                                  00003800
+       COPY TXREC.                                                      00003900
+       FD  NEW-FILE                                                     00004000
+           RECORDING MODE IS F                                          00004100
+           BLOCK CONTAINS 0 RECORDS                                     00004200
+           LABEL RECORDS ARE STANDARD.                                  00004300
+       COPY NEWMST.                                                     00004400
+       FD  EXC-FILE                                                     00004500
+           RECORDING MODE IS F                                          00004600
+           BLOCK CONTAINS 0 RECORDS                                     00004700
+           LABEL RECORDS ARE STANDARD.                                  00004800
+       COPY EXCREC.                                                     00004900
+       WORKING-STORAGE SECTION.                                         00005000
+       01  WS-MST-KEY                  PIC X(8).                        00005100
+       01  WS-TXN-KEY                  PIC X(8).                        00005200
+       01  WS-BALANCE                  PIC S9(9)V99 COMP-3.             00005300
+       01  WS-COUNT                    PIC 9(4).                        00005400
+       01  WS-EXC-CNT                  PIC 9(7) COMP VALUE 0.           00005500
+       01  WS-NEW-CNT                  PIC 9(7) COMP VALUE 0.           00005600
+       PROCEDURE DIVISION.                                              00005700
+       0000-MAIN.                                                       00005800
+           OPEN INPUT MST-FILE TXN-FILE                                 00005900
+           OPEN OUTPUT NEW-FILE EXC-FILE                                00006000
+           PERFORM 8100-READ-MST                                        00006100
+           PERFORM 8200-READ-TXN                                        00006200
+           PERFORM 2000-MATCH                                           00006300
+               UNTIL WS-MST-KEY = HIGH-VALUES                           00006400
+                 AND WS-TXN-KEY = HIGH-VALUES                           00006500
+           CLOSE MST-FILE TXN-FILE NEW-FILE EXC-FILE                    00006600
+           DISPLAY 'ACCTMTCH NEW=' WS-NEW-CNT ' EXC=' WS-EXC-CNT        00006700
+           IF WS-EXC-CNT > 0                                            00006800
+               MOVE 4 TO RETURN-CODE                                    00006900
+           END-IF                                                       00007000
+           STOP RUN.                                                    00007100
+                                                                        00007200
+      * KEYS ARE COMPARED IN THE PROGRAM'S COLLATING SEQUENCE: ON THE   00007300
+      * MAINFRAME THAT IS EBCDIC, SO DIGITS SORT AFTER LETTERS.         00007400
+       2000-MATCH.                                                      00007500
+           EVALUATE TRUE                                                00007600
+               WHEN WS-TXN-KEY < WS-MST-KEY                             00007700
+                   MOVE TX-ACCT-ID TO EX-ACCT-ID                        00007800
+                   MOVE TX-AMOUNT  TO EX-AMOUNT                         00007900
+                   MOVE 'NO ACCOUNT' TO EX-REASON                       00008000
+                   PERFORM 7000-WRITE-EXC                               00008100
+                   PERFORM 8200-READ-TXN                                00008200
+               WHEN WS-TXN-KEY = WS-MST-KEY                             00008300
+                   PERFORM 3000-APPLY                                   00008400
+                   PERFORM 8200-READ-TXN                                00008500
+               WHEN OTHER                                               00008600
+                   PERFORM 4000-WRITE-MASTER                            00008700
+                   PERFORM 8100-READ-MST                                00008800
+           END-EVALUATE.                                                00008900
+                                                                        00009000
+       3000-APPLY.                                                      00009100
+           IF MS-FROZEN                                                 00009200
+               MOVE TX-ACCT-ID TO EX-ACCT-ID                            00009300
+               MOVE TX-AMOUNT  TO EX-AMOUNT                             00009400
+               MOVE 'FROZEN' TO EX-REASON                               00009500
+               PERFORM 7000-WRITE-EXC                                   00009600
+           ELSE                                                         00009700
+               EVALUATE TRUE                                            00009800
+                   WHEN TX-CREDIT                                       00009900
+                       ADD TX-AMOUNT TO WS-BALANCE                      00010000
+                       ADD 1 TO WS-COUNT                                00010100
+                   WHEN TX-DEBIT                                        00010200
+                       SUBTRACT TX-AMOUNT FROM WS-BALANCE               00010300
+                       ADD 1 TO WS-COUNT                                00010400
+                   WHEN OTHER                                           00010500
+                       MOVE TX-ACCT-ID TO EX-ACCT-ID                    00010600
+                       MOVE TX-AMOUNT  TO EX-AMOUNT                     00010700
+                       MOVE 'BAD TYPE' TO EX-REASON                     00010800
+                       PERFORM 7000-WRITE-EXC                           00010900
+               END-EVALUATE                                             00011000
+           END-IF.                                                      00011100
+                                                                        00011200
+       4000-WRITE-MASTER.                                               00011300
+           MOVE MS-ACCT-ID TO NM-ACCT-ID                                00011400
+           MOVE WS-BALANCE TO NM-BALANCE                                00011500
+           MOVE MS-STATUS  TO NM-STATUS                                 00011600
+           MOVE WS-COUNT   TO NM-TXN-COUNT                              00011700
+           WRITE NM-REC                                                 00011800
+           ADD 1 TO WS-NEW-CNT.                                         00011900
+                                                                        00012000
+       7000-WRITE-EXC.                                                  00012100
+           WRITE EX-REC                                                 00012200
+           ADD 1 TO WS-EXC-CNT.                                         00012300
+                                                                        00012400
+       8100-READ-MST.                                                   00012500
+           READ MST-FILE                                                00012600
+               AT END                                                   00012700
+                   MOVE HIGH-VALUES TO WS-MST-KEY                       00012800
+               NOT AT END                                               00012900
+                   MOVE MS-ACCT-ID TO WS-MST-KEY                        00013000
+                   MOVE MS-BALANCE TO WS-BALANCE                        00013100
+                   MOVE ZERO TO WS-COUNT                                00013200
+           END-READ.                                                    00013300
+                                                                        00013400
+       8200-READ-TXN.                                                   00013500
+           READ TXN-FILE                                                00013600
+               AT END                                                   00013700
+                   MOVE HIGH-VALUES TO WS-TXN-KEY                       00013800
+               NOT AT END                                               00013900
+                   MOVE TX-ACCT-ID TO WS-TXN-KEY                        00014000
+           END-READ.                                                    00014100

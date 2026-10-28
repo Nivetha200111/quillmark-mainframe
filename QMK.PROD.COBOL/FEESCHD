@@ -1,0 +1,155 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * FEESCHD - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   MONTHLY ACCOUNT CHARGES BY PRODUCT (DD FEEIN -> DD CHGOUT):   00000500
+      *   BASE FEE, EXCESS TRANSACTION FEE AND OVERDRAFT INTEREST ON A  00000600
+      *   NEGATIVE AVERAGE BALANCE. BASIC AND PLUS TOTALS ARE CAPPED.   00000700
+      * CHANGE HISTORY (FICTIONAL)                                      00000800
+      *   1995-02-20 PQA  INITIAL VERSION                               00000900
+      *   2001-07-09 PQA  BALANCE WAIVER OF THE BASE FEE                00001000
+      *   2006-01-16 RMV  OVERDRAFT INTEREST AT 18.99 PERCENT           00001100
+      *---------------------------------------------------------------- 00001200
+       IDENTIFICATION DIVISION.                                         00001300
+       PROGRAM-ID. FEESCHD.                                             00001400
+       ENVIRONMENT DIVISION.                                            00001500
+       INPUT-OUTPUT SECTION.                                            00001600
+       FILE-CONTROL.                                                    00001700
+           SELECT FEE-FILE ASSIGN TO FEEIN                              00001800
+               ORGANIZATION IS SEQUENTIAL                               00001900
+               FILE STATUS IS WS-FEE-STATUS.                            00002000
+           SELECT CHG-FILE ASSIGN TO CHGOUT                             00002100
+               ORGANIZATION IS SEQUENTIAL                               00002200
+               FILE STATUS IS WS-CHG-STATUS.                            00002300
+       DATA DIVISION.                                                   00002400
+       FILE SECTION.                                                    00002500
+       FD  FEE-FILE                                                     00002600
+           RECORDING MODE IS F                                          00002700
+           BLOCK CONTAINS 0 RECORDS                                     00002800
+           LABEL RECORDS ARE STANDARD.                                  00002900
+       COPY FEEREC.                                                     00003000
+       FD  CHG-FILE                                                     00003100
+           RECORDING MODE IS F                                          00003200
+           BLOCK CONTAINS 0 RECORDS                                     00003300
+           LABEL RECORDS ARE STANDARD.                                  00003400
+       COPY CHGREC.                                                     00003500
+       WORKING-STORAGE SECTION.                                         00003600
+       01  WS-FEE-STATUS               PIC XX.                          00003700
+       01  WS-CHG-STATUS               PIC XX.                          00003800
+       01  WS-EOF-FLAG                 PIC X VALUE 'N'.                 00003900
+           88  END-OF-ACCOUNTS         VALUE 'Y'.                       00004000
+       01  WS-WAIVER-BAL               PIC S9(9)V99 COMP-3              00004100
+                                       VALUE 5000.00.                   00004200
+       01  WS-PER-TXN                  PIC 9V99 VALUE 0.35.             00004300
+       01  WS-OD-RATE                  PIC 9V9(4) VALUE 0.1899.         00004400
+       01  WS-CAP                      PIC S9(3)V99 COMP-3              00004500
+                                       VALUE 40.00.                     00004600
+       01  WS-BASE                     PIC S9(3)V99 COMP-3.             00004700
+       01  WS-FREE-TXNS                PIC 9(4) COMP-3.                 00004800
+       01  WS-EXCESS                   PIC S9(5) COMP-3.                00004900
+       01  WS-TXN-FEE                  PIC S9(3)V99 COMP-3.             00005000
+       01  WS-OD-INT                   PIC S9(5)V99 COMP-3.             00005100
+       01  WS-TOTAL                    PIC S9(3)V99 COMP-3.             00005200
+       01  WS-CODE                     PIC XX.                          00005300
+       01  WS-COUNTERS.                                                 00005400
+           05  WS-READ-CNT             PIC 9(7) COMP VALUE 0.           00005500
+           05  WS-CAPPED-CNT           PIC 9(7) COMP VALUE 0.           00005600
+       PROCEDURE DIVISION.                                              00005700
+       0000-MAIN.                                                       00005800
+           PERFORM 1000-INIT                                            00005900
+           PERFORM 2000-PROCESS UNTIL END-OF-ACCOUNTS                   00006000
+           PERFORM 9000-TERM                                            00006100
+           STOP RUN.                                                    00006200
+                                                                        00006300
+       1000-INIT.                                                       00006400
+           OPEN INPUT FEE-FILE                                          00006500
+           IF WS-FEE-STATUS NOT = '00'                                  00006600
+               DISPLAY 'FEESCHD OPEN FEEIN FAILED ' WS-FEE-STATUS       00006700
+               MOVE 16 TO RETURN-CODE                                   00006800
+               STOP RUN                                                 00006900
+           END-IF                                                       00007000
+           OPEN OUTPUT CHG-FILE                                         00007100
+           IF WS-CHG-STATUS NOT = '00'                                  00007200
+               DISPLAY 'FEESCHD OPEN CHGOUT FAILED ' WS-CHG-STATUS      00007300
+               MOVE 16 TO RETURN-CODE                                   00007400
+               STOP RUN                                                 00007500
+           END-IF                                                       00007600
+           PERFORM 8000-READ.                                           00007700
+                                                                        00007800
+       2000-PROCESS.                                                    00007900
+           ADD 1 TO WS-READ-CNT                                         00008000
+           MOVE 'OK' TO WS-CODE                                         00008100
+           PERFORM 3000-BASE-FEE                                        00008200
+           PERFORM 4000-TXN-FEE                                         00008300
+           PERFORM 5000-OD-INTEREST                                     00008400
+           PERFORM 6000-TOTAL                                           00008500
+           PERFORM 7000-WRITE-RESULT                                    00008600
+           PERFORM 8000-READ.                                           00008700
+                                                                        00008800
+      * BASE FEE BY PRODUCT. WAIVED WHEN THE AVERAGE BALANCE IS AT OR   00008900
+      * ABOVE THE WAIVER BALANCE.                                       00009000
+       3000-BASE-FEE.                                                   00009100
+           EVALUATE TRUE                                                00009200
+               WHEN PRODUCT-BASIC                                       00009300
+                   MOVE 6.00 TO WS-BASE                                 00009400
+                   MOVE 10   TO WS-FREE-TXNS                            00009500
+               WHEN PRODUCT-PLUS                                        00009600
+                   MOVE 3.50 TO WS-BASE                                 00009700
+                   MOVE 25   TO WS-FREE-TXNS                            00009800
+               WHEN OTHER                                               00009900
+                   MOVE ZERO TO WS-BASE                                 00010000
+                   MOVE 9999 TO WS-FREE-TXNS                            00010100
+           END-EVALUATE                                                 00010200
+           IF FEE-AVG-BAL NOT < WS-WAIVER-BAL AND WS-BASE > ZERO        00010300
+               MOVE ZERO TO WS-BASE                                     00010400
+               MOVE 'WV' TO WS-CODE                                     00010500
+           END-IF.                                                      00010600
+                                                                        00010700
+       4000-TXN-FEE.                                                    00010800
+           COMPUTE WS-EXCESS = FEE-TXN-COUNT - WS-FREE-TXNS             00010900
+           IF WS-EXCESS > ZERO                                          00011000
+               COMPUTE WS-TXN-FEE = WS-EXCESS * WS-PER-TXN              00011100
+           ELSE                                                         00011200
+               MOVE ZERO TO WS-TXN-FEE                                  00011300
+           END-IF.                                                      00011400
+                                                                        00011500
+      * OVERDRAFT INTEREST: 18.99 PERCENT A YEAR ON A NEGATIVE AVERAGE  00011600
+      * BALANCE FOR THE DAYS IN THE MONTH, ROUNDED, CHARGED POSITIVE.   00011700
+       5000-OD-INTEREST.                                                00011800
+           IF FEE-AVG-BAL < ZERO                                        00011900
+               COMPUTE WS-OD-INT ROUNDED =                              00012000
+                   ZERO - FEE-AVG-BAL * WS-OD-RATE                      00012100
+                   * FEE-MONTH-DAYS / 365                               00012200
+           ELSE                                                         00012300
+               MOVE ZERO TO WS-OD-INT                                   00012400
+           END-IF.                                                      00012500
+                                                                        00012600
+      * THE TOTAL IS ACCUMULATED IN S9(3)V99. BASIC AND PLUS TOTALS ARE 00012700
+      * CAPPED; PRIVATE IS NOT.                                         00012800
+       6000-TOTAL.                                                      00012900
+           COMPUTE WS-TOTAL = WS-BASE + WS-TXN-FEE + WS-OD-INT          00013000
+           IF NOT PRODUCT-PRIVATE AND WS-TOTAL > WS-CAP                 00013100
+               MOVE WS-CAP TO WS-TOTAL                                  00013200
+               MOVE 'CP' TO WS-CODE                                     00013300
+               ADD 1 TO WS-CAPPED-CNT                                   00013400
+           END-IF.                                                      00013500
+                                                                        00013600
+       7000-WRITE-RESULT.                                               00013700
+           MOVE FEE-ACCT-ID TO CHG-ACCT-ID                              00013800
+           MOVE WS-BASE     TO CHG-BASE                                 00013900
+           MOVE WS-TXN-FEE  TO CHG-TXN-FEE                              00014000
+           MOVE WS-OD-INT   TO CHG-OD-INT                               00014100
+           MOVE WS-TOTAL    TO CHG-TOTAL                                00014200
+           MOVE WS-CODE     TO CHG-CODE                                 00014300
+           WRITE CHG-REC.                                               00014400
+                                                                        00014500
+       8000-READ.                                                       00014600
+           READ FEE-FILE                                                00014700
+               AT END                                                   00014800
+                   SET END-OF-ACCOUNTS TO TRUE                          00014900
+           END-READ.                                                    00015000
+                                                                        00015100
+       9000-TERM.                                                       00015200
+           CLOSE FEE-FILE CHG-FILE                                      00015300
+           DISPLAY 'FEESCHD ACCOUNTS=' WS-READ-CNT                      00015400
+                   ' CAPPED=' WS-CAPPED-CNT.                            00015500

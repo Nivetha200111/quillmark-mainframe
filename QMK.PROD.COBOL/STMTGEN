@@ -1,0 +1,48 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * STMTGEN - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   MONTHLY STATEMENT LINES FROM THE DB2 TRANSACTION TABLE FOR    00000500
+      *   ONE ACCOUNT RANGE, WRITTEN TO DD STMTOUT.                     00000600
+      *---------------------------------------------------------------- 00000700
+       IDENTIFICATION DIVISION.                                         00000800
+       PROGRAM-ID. STMTGEN.                                             00000900
+       ENVIRONMENT DIVISION.                                            00001000
+       INPUT-OUTPUT SECTION.                                            00001100
+       FILE-CONTROL.                                                    00001200
+           SELECT STMT-FILE ASSIGN TO STMTOUT.                          00001300
+       DATA DIVISION.                                                   00001400
+       FILE SECTION.                                                    00001500
+       FD  STMT-FILE                                                    00001600
+           RECORDING MODE IS F.                                         00001700
+       01  STMT-LINE                   PIC X(60).                       00001800
+       WORKING-STORAGE SECTION.                                         00001900
+           EXEC SQL INCLUDE SQLCA END-EXEC.                             00002000
+           EXEC SQL INCLUDE DCLTXN END-EXEC.                            00002100
+       01  WS-FROM-ACCT                PIC X(10) VALUE '99Q0000001'.    00002200
+       01  WS-TO-ACCT                  PIC X(10) VALUE '99Q9999999'.    00002300
+       01  WS-AMOUNT-ED                PIC -(7)9.99.                    00002400
+           EXEC SQL DECLARE TXNCUR CURSOR FOR                           00002500
+               SELECT TXN_ID, ACCOUNT_NO, POSTED_DATE, AMOUNT           00002600
+                 FROM QMK.TRANSACTION                                   00002700
+                WHERE ACCOUNT_NO BETWEEN :WS-FROM-ACCT AND :WS-TO-ACCT  00002800
+                ORDER BY ACCOUNT_NO, POSTED_DATE                        00002900
+           END-EXEC.                                                    00003000
+       PROCEDURE DIVISION.                                              00003100
+       0000-MAIN.                                                       00003200
+           OPEN OUTPUT STMT-FILE                                        00003300
+           EXEC SQL OPEN TXNCUR END-EXEC                                00003400
+           PERFORM UNTIL SQLCODE NOT = 0                                00003500
+               EXEC SQL FETCH TXNCUR                                    00003600
+                   INTO :TXN-ID, :ACCOUNT-NO, :POSTED-DATE, :AMOUNT     00003700
+               END-EXEC                                                 00003800
+               IF SQLCODE = 0                                           00003900
+                   MOVE AMOUNT TO WS-AMOUNT-ED                          00004000
+                   STRING ACCOUNT-NO ' ' POSTED-DATE ' ' WS-AMOUNT-ED   00004100
+                       DELIMITED BY SIZE INTO STMT-LINE                 00004200
+                   WRITE STMT-LINE                                      00004300
+               END-IF                                                   00004400
+           END-PERFORM                                                  00004500
+           EXEC SQL CLOSE TXNCUR END-EXEC                               00004600
+           CLOSE STMT-FILE                                              00004700
+           STOP RUN.                                                    00004800

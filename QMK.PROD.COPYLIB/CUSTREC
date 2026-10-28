@@ -1,0 +1,12 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * CUSTOMER MASTER, VSAM KSDS QMK.PROD.CUST.KSDS (KEY 1-8)         00000300
+       01  CUST-REC.                                                    00000400
+           05  CUST-ID                 PIC X(8).                        00000500
+           05  CUST-NAME               PIC X(30).                       00000600
+           05  CUST-SEGMENT            PIC X(2).                        00000700
+               88  CUST-RETAIL         VALUE 'RT'.                      00000800
+               88  CUST-PRIVATE        VALUE 'PV'.                      00000900
+           05  CUST-RISK-SCORE         PIC S9(3) COMP-3.                00001000
+           05  CUST-LAST-CHANGE        PIC 9(8).                        00001100
+           05  FILLER                  PIC X(30).                       00001200

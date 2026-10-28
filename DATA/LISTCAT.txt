@@ -1,0 +1,12 @@
+SYNTHETIC SAMPLE - written for the Diocle hackathon project. Fictional data, no real customers.
+
+LISTCAT-STYLE SUMMARY OF THE EXTRACTS IN THIS FOLDER (all RECFM=FB, EBCDIC cp037)
+
+DATASET                            LRECL RECORDS  USED BY
+QMK.PROD.ACCT.EXTRACT.DAILY           31      40  INTACCR (QMKD010 via PROC QMKINT)
+QMK.PROD.ACCT.PRINCIPAL.DAILY         30      40  DAYCTRL (QMKD010 via PROC QMKCTL)
+QMK.PROD.ACCT.MONTHLY                 29      40  FEESCHD (QMKM010)
+QMK.PROD.TXN.PENDING                  37      60  TXNPOST (QMKD020 via PROC QMKPOST)
+QMK.PROD.ACCT.EXTRACT.PACKED          33      40  PKDPOST (QMKW010)
+QMK.PROD.ACCT.MASTER.G0042V00         24      30  ACCTMTCH master, generation (0) (QMKD010)
+QMK.PROD.TXN.DAILY                    19      80  QMKD010 SORT005 (unsorted; DFSORT sorts it for ACCTMTCH)

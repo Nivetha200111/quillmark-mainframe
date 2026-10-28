@@ -1,0 +1,136 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * TXNPOST - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   POSTS ONE TRANSACTION PER RECORD AGAINST THE BALANCE CARRIED  00000500
+      *   ON THE RECORD (DD TXNIN), WRITES ONE RESULT (DD POSTOUT).     00000600
+      *   P = OUTGOING PAYMENT (SURCHARGE, OVERDRAFT LIMIT CHECK)       00000700
+      *   F = FEE DEBIT, I = MONTHLY INTEREST CREDIT (ANNUAL / 12)      00000800
+      * CHANGE HISTORY (FICTIONAL)                                      00000900
+      *   1996-05-02 DLW  INITIAL VERSION                               00001000
+      *   1999-12-14 DLW  PAYMENT SURCHARGE AND CAP                     00001100
+      *   2004-08-30 HSN  OVERDRAFT LIMIT CHECK                         00001200
+      *---------------------------------------------------------------- 00001300
+       IDENTIFICATION DIVISION.                                         00001400
+       PROGRAM-ID. TXNPOST.                                             00001500
+       ENVIRONMENT DIVISION.                                            00001600
+       INPUT-OUTPUT SECTION.                                            00001700
+       FILE-CONTROL.                                                    00001800
+           SELECT TXN-FILE ASSIGN TO TXNIN                              00001900
+               ORGANIZATION IS SEQUENTIAL                               00002000
+               FILE STATUS IS WS-TXN-STATUS.                            00002100
+           SELECT POST-FILE ASSIGN TO POSTOUT                           00002200
+               ORGANIZATION IS SEQUENTIAL                               00002300
+               FILE STATUS IS WS-POST-STATUS.                           00002400
+       DATA DIVISION.                                                   00002500
+       FILE SECTION.                                                    00002600
+       FD  TXN-FILE                                                     00002700
+           RECORDING MODE IS F                                          00002800
+           BLOCK CONTAINS 0 RECORDS                                     00002900
+           LABEL RECORDS ARE STANDARD.                                  00003000
+       COPY TXNREC.                                                     00003100
+       FD  POST-FILE                                                    00003200
+           RECORDING MODE IS F                                          00003300
+           BLOCK CONTAINS 0 RECORDS                                     00003400
+           LABEL RECORDS ARE STANDARD.                                  00003500
+       COPY POSTREC.                                                    00003600
+       WORKING-STORAGE SECTION.                                         00003700
+       01  WS-TXN-STATUS               PIC XX.                          00003800
+       01  WS-POST-STATUS              PIC XX.                          00003900
+       01  WS-EOF-FLAG                 PIC X VALUE 'N'.                 00004000
+           88  END-OF-TXNS             VALUE 'Y'.                       00004100
+       01  WS-SURCHARGE-RATE           PIC V9(4) VALUE .0125.           00004200
+       01  WS-SURCHARGE-CAP            PIC S9(3)V99 COMP-3              00004300
+                                       VALUE 15.00.                     00004400
+       01  WS-CHARGE                   PIC S9(3)V99 COMP-3.             00004500
+       01  WS-CREDIT                   PIC S9(7)V99 COMP-3.             00004600
+       01  WS-NEW-BAL                  PIC S9(9)V99 COMP-3.             00004700
+       01  WS-FLOOR                    PIC S9(9)V99 COMP-3.             00004800
+       01  WS-COUNTERS.                                                 00004900
+           05  WS-POSTED-CNT           PIC 9(7) COMP VALUE 0.           00005000
+           05  WS-REJECT-CNT           PIC 9(7) COMP VALUE 0.           00005100
+       PROCEDURE DIVISION.                                              00005200
+       0000-MAIN.                                                       00005300
+           PERFORM 1000-INIT                                            00005400
+           PERFORM 2000-PROCESS UNTIL END-OF-TXNS                       00005500
+           PERFORM 9000-TERM                                            00005600
+           STOP RUN.                                                    00005700
+                                                                        00005800
+       1000-INIT.                                                       00005900
+           OPEN INPUT TXN-FILE                                          00006000
+           IF WS-TXN-STATUS NOT = '00'                                  00006100
+               DISPLAY 'TXNPOST OPEN TXNIN FAILED ' WS-TXN-STATUS       00006200
+               MOVE 16 TO RETURN-CODE                                   00006300
+               STOP RUN                                                 00006400
+           END-IF                                                       00006500
+           OPEN OUTPUT POST-FILE                                        00006600
+           IF WS-POST-STATUS NOT = '00'                                 00006700
+               DISPLAY 'TXNPOST OPEN POSTOUT FAILED ' WS-POST-STATUS    00006800
+               MOVE 16 TO RETURN-CODE                                   00006900
+               STOP RUN                                                 00007000
+           END-IF                                                       00007100
+           PERFORM 8000-READ.                                           00007200
+                                                                        00007300
+       2000-PROCESS.                                                    00007400
+           MOVE ZERO TO WS-CHARGE                                       00007500
+           MOVE TXN-BALANCE TO WS-NEW-BAL                               00007600
+           EVALUATE TRUE                                                00007700
+               WHEN TXN-PAYMENT                                         00007800
+                   PERFORM 3000-POST-PAYMENT                            00007900
+               WHEN TXN-FEE                                             00008000
+                   COMPUTE WS-NEW-BAL = TXN-BALANCE - TXN-AMOUNT        00008100
+                   MOVE 'FE' TO POST-STATUS                             00008200
+               WHEN TXN-INTEREST                                        00008300
+                   COMPUTE WS-CREDIT ROUNDED = TXN-AMOUNT / 12          00008400
+                   COMPUTE WS-NEW-BAL = TXN-BALANCE + WS-CREDIT         00008500
+                   MOVE 'IC' TO POST-STATUS                             00008600
+               WHEN OTHER                                               00008700
+                   MOVE 'RJ' TO POST-STATUS                             00008800
+           END-EVALUATE                                                 00008900
+           IF POST-STATUS = 'RJ' OR POST-STATUS = 'NS'                  00009000
+               ADD 1 TO WS-REJECT-CNT                                   00009100
+           ELSE                                                         00009200
+               ADD 1 TO WS-POSTED-CNT                                   00009300
+           END-IF                                                       00009400
+           PERFORM 5000-WRITE-RESULT                                    00009500
+           PERFORM 8000-READ.                                           00009600
+                                                                        00009700
+      * SURCHARGE IS 1.25 PERCENT, TRUNCATED TO THE CENT, THEN CAPPED.  00009800
+      * A PAYMENT MAY TAKE THE BALANCE DOWN TO EXACTLY -OD-LIMIT, NOT   00009900
+      * BELOW IT. REFUSED PAYMENTS LEAVE THE BALANCE AND CHARGE AS-IS.  00010000
+       3000-POST-PAYMENT.                                               00010100
+           IF TXN-AMOUNT NOT > ZERO                                     00010200
+               MOVE 'RJ' TO POST-STATUS                                 00010300
+           ELSE                                                         00010400
+               COMPUTE WS-CHARGE = TXN-AMOUNT * WS-SURCHARGE-RATE       00010500
+               IF WS-CHARGE > WS-SURCHARGE-CAP                          00010600
+                   MOVE WS-SURCHARGE-CAP TO WS-CHARGE                   00010700
+               END-IF                                                   00010800
+               COMPUTE WS-NEW-BAL =                                     00010900
+                   TXN-BALANCE - TXN-AMOUNT - WS-CHARGE                 00011000
+               COMPUTE WS-FLOOR = ZERO - TXN-OD-LIMIT                   00011100
+               IF WS-NEW-BAL < WS-FLOOR                                 00011200
+                   MOVE TXN-BALANCE TO WS-NEW-BAL                       00011300
+                   MOVE ZERO TO WS-CHARGE                               00011400
+                   MOVE 'NS' TO POST-STATUS                             00011500
+               ELSE                                                     00011600
+                   MOVE 'OK' TO POST-STATUS                             00011700
+               END-IF                                                   00011800
+           END-IF.                                                      00011900
+                                                                        00012000
+       5000-WRITE-RESULT.                                               00012100
+           MOVE TXN-ID     TO POST-TXN-ID                               00012200
+           MOVE WS-CHARGE  TO POST-CHARGE                               00012300
+           MOVE WS-NEW-BAL TO POST-NEW-BAL                              00012400
+           WRITE POST-REC.                                              00012500
+                                                                        00012600
+       8000-READ.                                                       00012700
+           READ TXN-FILE                                                00012800
+               AT END                                                   00012900
+                   SET END-OF-TXNS TO TRUE                              00013000
+           END-READ.                                                    00013100
+                                                                        00013200
+       9000-TERM.                                                       00013300
+           CLOSE TXN-FILE POST-FILE                                     00013400
+           DISPLAY 'TXNPOST POSTED=' WS-POSTED-CNT                      00013500
+                   ' REJECTED=' WS-REJECT-CNT.                          00013600

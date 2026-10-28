@@ -1,0 +1,16 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * DCLGEN TABLE(QMK.TRANSACTION) LIBRARY(QMK.PROD.DCLGEN)          00000300
+           EXEC SQL DECLARE QMK.TRANSACTION TABLE                       00000400
+           ( TXN_ID                         CHAR(9) NOT NULL,           00000500
+             ACCOUNT_NO                     CHAR(10) NOT NULL,          00000600
+             POSTED_DATE                    DATE NOT NULL,              00000700
+             TXN_TYPE                       CHAR(1) NOT NULL,           00000800
+             AMOUNT                         DECIMAL(9, 2) NOT NULL      00000900
+           ) END-EXEC.                                                  00001000
+       01  DCLTRANSACTION.                                              00001100
+           10 TXN-ID               PIC X(9).                            00001200
+           10 ACCOUNT-NO           PIC X(10).                           00001300
+           10 POSTED-DATE          PIC X(10).                           00001400
+           10 TXN-TYPE             PIC X(1).                            00001500
+           10 AMOUNT               PIC S9(7)V9(2) USAGE COMP-3.         00001600

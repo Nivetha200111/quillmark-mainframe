@@ -1,0 +1,48 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * ACCTINQ - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   CICS ONLINE CUSTOMER INQUIRY, TRANSACTION QINQ, MAP ACCTMAP.  00000500
+      *   PSEUDO-CONVERSATIONAL: READS THE KEY FROM THE SCREEN, READS   00000600
+      *   THE CUSTOMER KSDS AND SENDS THE DETAILS BACK.                 00000700
+      *---------------------------------------------------------------- 00000800
+       IDENTIFICATION DIVISION.                                         00000900
+       PROGRAM-ID. ACCTINQ.                                             00001000
+       DATA DIVISION.                                                   00001100
+       WORKING-STORAGE SECTION.                                         00001200
+       COPY CUSTREC.                                                    00001300
+       01  WS-RESP                     PIC S9(8) COMP.                  00001400
+       01  WS-MAP-IN.                                                   00001500
+           05  FILLER                  PIC X(12).                       00001600
+           05  MI-CUST-ID              PIC X(8).                        00001700
+       01  WS-MAP-OUT.                                                  00001800
+           05  FILLER                  PIC X(12).                       00001900
+           05  MO-CUST-NAME            PIC X(30).                       00002000
+           05  MO-SEGMENT              PIC X(2).                        00002100
+           05  MO-MESSAGE              PIC X(40).                       00002200
+       LINKAGE SECTION.                                                 00002300
+       01  DFHCOMMAREA                 PIC X(1).                        00002400
+       PROCEDURE DIVISION.                                              00002500
+       0000-MAIN.                                                       00002600
+           IF EIBCALEN = 0                                              00002700
+               EXEC CICS SEND MAP('ACCTMAP') MAPSET('ACCTSET')          00002800
+                   MAPONLY ERASE END-EXEC                               00002900
+               EXEC CICS RETURN TRANSID('QINQ') COMMAREA(DFHCOMMAREA)   00003000
+                   LENGTH(1) END-EXEC                                   00003100
+           END-IF                                                       00003200
+           EXEC CICS RECEIVE MAP('ACCTMAP') MAPSET('ACCTSET')           00003300
+               INTO(WS-MAP-IN) RESP(WS-RESP) END-EXEC                   00003400
+           MOVE MI-CUST-ID TO CUST-ID                                   00003500
+           EXEC CICS READ FILE('CUSTKSDS') INTO(CUST-REC)               00003600
+               RIDFLD(CUST-ID) RESP(WS-RESP) END-EXEC                   00003700
+           IF WS-RESP = DFHRESP(NORMAL)                                 00003800
+               MOVE CUST-NAME    TO MO-CUST-NAME                        00003900
+               MOVE CUST-SEGMENT TO MO-SEGMENT                          00004000
+               MOVE SPACES       TO MO-MESSAGE                          00004100
+           ELSE                                                         00004200
+               MOVE 'CUSTOMER NOT FOUND' TO MO-MESSAGE                  00004300
+           END-IF                                                       00004400
+           EXEC CICS SEND MAP('ACCTMAP') MAPSET('ACCTSET')              00004500
+               FROM(WS-MAP-OUT) DATAONLY END-EXEC                       00004600
+           EXEC CICS RETURN TRANSID('QINQ') COMMAREA(DFHCOMMAREA)       00004700
+               LENGTH(1) END-EXEC.                                      00004800

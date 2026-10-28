@@ -1,0 +1,10 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * DAILY TRANSACTIONS, SORTED BY ACCOUNT ID (19 BYTES)             00000300
+       01  TX-REC.                                                      00000400
+           05  TX-ACCT-ID              PIC X(8).                        00000500
+           05  TX-AMOUNT               PIC S9(7)V99                     00000600
+                                       SIGN LEADING SEPARATE.           00000700
+           05  TX-TYPE                 PIC X.                           00000800
+               88  TX-CREDIT           VALUE 'C'.                       00000900
+               88  TX-DEBIT            VALUE 'D'.                       00001000

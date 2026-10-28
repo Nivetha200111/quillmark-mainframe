@@ -1,0 +1,14 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * MONTHLY CHARGE RESULT (38 BYTES)                                00000300
+       01  CHG-REC.                                                     00000400
+           05  CHG-ACCT-ID             PIC X(10).                       00000500
+           05  CHG-BASE                PIC S9(3)V99                     00000600
+                                       SIGN LEADING SEPARATE.           00000700
+           05  CHG-TXN-FEE             PIC S9(3)V99                     00000800
+                                       SIGN LEADING SEPARATE.           00000900
+           05  CHG-OD-INT              PIC S9(5)V99                     00001000
+                                       SIGN LEADING SEPARATE.           00001100
+           05  CHG-TOTAL               PIC S9(3)V99                     00001200
+                                       SIGN LEADING SEPARATE.           00001300
+           05  CHG-CODE                PIC XX.                          00001400

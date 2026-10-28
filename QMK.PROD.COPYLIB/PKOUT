@@ -1,0 +1,11 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * POSTING RESULT, FIXED LENGTH (RECFM=FB, 42 BYTES)               00000300
+       01  PO-REC.                                                      00000400
+           05  PO-ACCT                 PIC X(10).                       00000500
+           05  PO-INT                  PIC S9(7)V99 COMP-3.             00000600
+           05  PO-NEW-BAL              PIC S9(9)V99 COMP-3.             00000700
+           05  PO-HEADROOM             PIC S9(7)V99                     00000800
+                                       SIGN TRAILING SEPARATE.          00000900
+           05  PO-ITEM-UNITS           PIC S9(9) COMP.                  00001000
+           05  PO-REVERSAL             PIC S9(5)V99.                    00001100

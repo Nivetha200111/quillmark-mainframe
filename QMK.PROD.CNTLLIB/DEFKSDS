@@ -1,0 +1,12 @@
+/* SYNTHETIC SAMPLE - written for the Diocle hackathon project. */
+  DELETE QMK.PROD.CUST.KSDS CLUSTER PURGE
+  SET MAXCC = 0
+  DEFINE CLUSTER (NAME(QMK.PROD.CUST.KSDS)          -
+                  INDEXED                            -
+                  KEYS(8 0)                          -
+                  RECORDSIZE(80 80)                  -
+                  FREESPACE(10 10)                   -
+                  SHAREOPTIONS(2 3))                 -
+         DATA    (NAME(QMK.PROD.CUST.KSDS.DATA)     -
+                  CYLINDERS(5 1))                    -
+         INDEX   (NAME(QMK.PROD.CUST.KSDS.INDEX))

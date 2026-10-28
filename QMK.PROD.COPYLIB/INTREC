@@ -1,0 +1,12 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * INTEREST ACCRUAL OUTPUT RECORD (42 BYTES)                       00000300
+       01  OUT-REC.                                                     00000400
+           05  OUT-ACCT-ID             PIC X(10).                       00000500
+           05  OUT-INTEREST            PIC S9(7)V99                     00000600
+                                       SIGN LEADING SEPARATE.           00000700
+           05  OUT-FEE                 PIC S9(5)V99                     00000800
+                                       SIGN LEADING SEPARATE.           00000900
+           05  OUT-NEW-BAL             PIC S9(9)V99                     00001000
+                                       SIGN LEADING SEPARATE.           00001100
+           05  OUT-STATUS              PIC XX.                          00001200

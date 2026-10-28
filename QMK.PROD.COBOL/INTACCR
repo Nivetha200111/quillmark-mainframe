@@ -1,0 +1,133 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * INTACCR - DAILY INTEREST ACCRUAL AND MAINTENANCE FEE            00000400
+      *   READS THE ACCOUNT EXTRACT (DD ACCTIN), COMPUTES ACCRUED       00000500
+      *   INTEREST AND FEES, WRITES ONE RESULT PER ACCOUNT (DD INTOUT). 00000600
+      * CHANGE HISTORY (FICTIONAL)                                      00000700
+      *   1994-03-11 RJK  INITIAL VERSION                               00000800
+      *   1998-11-02 MTP  OVERDRAFT PENALTY RATE ADDED                  00000900
+      *   2003-06-19 RJK  PREMIUM TIER FEE WAIVER                       00001000
+      *---------------------------------------------------------------- 00001100
+       IDENTIFICATION DIVISION.                                         00001200
+       PROGRAM-ID. INTACCR.                                             00001300
+       ENVIRONMENT DIVISION.                                            00001400
+       INPUT-OUTPUT SECTION.                                            00001500
+       FILE-CONTROL.                                                    00001600
+           SELECT ACCT-FILE ASSIGN TO ACCTIN                            00001700
+               ORGANIZATION IS SEQUENTIAL                               00001800
+               FILE STATUS IS WS-ACCT-STATUS.                           00001900
+           SELECT OUT-FILE ASSIGN TO INTOUT                             00002000
+               ORGANIZATION IS SEQUENTIAL                               00002100
+               FILE STATUS IS WS-OUT-STATUS.                            00002200
+       DATA DIVISION.                                                   00002300
+       FILE SECTION.                                                    00002400
+       FD  ACCT-FILE                                                    00002500
+           RECORDING MODE IS F                                          00002600
+           BLOCK CONTAINS 0 RECORDS                                     00002700
+           LABEL RECORDS ARE STANDARD.                                  00002800
+       COPY ACCTREC.                                                    00002900
+       FD  OUT-FILE                                                     00003000
+           RECORDING MODE IS F                                          00003100
+           BLOCK CONTAINS 0 RECORDS                                     00003200
+           LABEL RECORDS ARE STANDARD.                                  00003300
+       COPY INTREC.                                                     00003400
+       WORKING-STORAGE SECTION.                                         00003500
+       01  WS-ACCT-STATUS              PIC XX.                          00003600
+       01  WS-OUT-STATUS               PIC XX.                          00003700
+       01  WS-EOF-FLAG                 PIC X VALUE 'N'.                 00003800
+           88  END-OF-ACCOUNTS         VALUE 'Y'.                       00003900
+       01  WS-PENALTY-RATE             PIC 9V9(4) VALUE 0.0500.         00004000
+       01  WS-FEE-FLOOR                PIC S9(5)V99 COMP-3              00004100
+                                       VALUE 1000.00.                   00004200
+       01  WS-FEE-CAP                  PIC S9(5)V99 COMP-3              00004300
+                                       VALUE 25.00.                     00004400
+       01  WS-INTEREST                 PIC S9(7)V99 COMP-3.             00004500
+       01  WS-FEE                      PIC S9(5)V99 COMP-3.             00004600
+       01  WS-NEW-BAL                  PIC S9(9)V99 COMP-3.             00004700
+       01  WS-COUNTERS.                                                 00004800
+           05  WS-READ-CNT             PIC 9(7) COMP VALUE 0.           00004900
+           05  WS-WRITE-CNT            PIC 9(7) COMP VALUE 0.           00005000
+       PROCEDURE DIVISION.                                              00005100
+       0000-MAIN.                                                       00005200
+           PERFORM 1000-INIT                                            00005300
+           PERFORM 2000-PROCESS UNTIL END-OF-ACCOUNTS                   00005400
+           PERFORM 9000-TERM                                            00005500
+           STOP RUN.                                                    00005600
+                                                                        00005700
+       1000-INIT.                                                       00005800
+           OPEN INPUT ACCT-FILE                                         00005900
+           IF WS-ACCT-STATUS NOT = '00'                                 00006000
+               DISPLAY 'INTACCR OPEN ACCTIN FAILED ' WS-ACCT-STATUS     00006100
+               MOVE 16 TO RETURN-CODE                                   00006200
+               STOP RUN                                                 00006300
+           END-IF                                                       00006400
+           OPEN OUTPUT OUT-FILE                                         00006500
+           IF WS-OUT-STATUS NOT = '00'                                  00006600
+               DISPLAY 'INTACCR OPEN INTOUT FAILED ' WS-OUT-STATUS      00006700
+               MOVE 16 TO RETURN-CODE                                   00006800
+               STOP RUN                                                 00006900
+           END-IF                                                       00007000
+           PERFORM 8000-READ.                                           00007100
+                                                                        00007200
+       2000-PROCESS.                                                    00007300
+           ADD 1 TO WS-READ-CNT                                         00007400
+           PERFORM 3000-CALC-INTEREST                                   00007500
+           PERFORM 4000-CALC-FEE                                        00007600
+           PERFORM 5000-WRITE-RESULT                                    00007700
+           PERFORM 8000-READ.                                           00007800
+                                                                        00007900
+      * SIMPLE DAILY INTEREST, ACTUAL/365. CREDIT BALANCES EARN THE     00008000
+      * ACCOUNT RATE; OVERDRAWN BALANCES ARE CHARGED RATE + PENALTY.    00008100
+       3000-CALC-INTEREST.                                              00008200
+           EVALUATE TRUE                                                00008300
+               WHEN ACCT-BALANCE > ZERO                                 00008400
+                   COMPUTE WS-INTEREST ROUNDED =                        00008500
+                       ACCT-BALANCE * ACCT-RATE * ACCT-DAYS / 365       00008600
+               WHEN ACCT-BALANCE < ZERO                                 00008700
+                   COMPUTE WS-INTEREST ROUNDED =                        00008800
+                       ACCT-BALANCE * (ACCT-RATE + WS-PENALTY-RATE)     00008900
+                       * ACCT-DAYS / 365                                00009000
+               WHEN OTHER                                               00009100
+                   MOVE ZERO TO WS-INTEREST                             00009200
+           END-EVALUATE.                                                00009300
+                                                                        00009400
+      * MAINTENANCE FEE: 0.15 PERCENT OF THE SHORTFALL BELOW THE FLOOR, 00009500
+      * TRUNCATED TO THE CENT, CAPPED. PREMIUM TIER IS WAIVED.          00009600
+       4000-CALC-FEE.                                                   00009700
+           MOVE ZERO TO WS-FEE                                          00009800
+           IF NOT ACCT-TIER-PREMIUM                                     00009900
+              AND ACCT-BALANCE < WS-FEE-FLOOR                           00010000
+               COMPUTE WS-FEE =                                         00010100
+                   (WS-FEE-FLOOR - ACCT-BALANCE) * 0.0015               00010200
+               IF WS-FEE > WS-FEE-CAP                                   00010300
+                   MOVE WS-FEE-CAP TO WS-FEE                            00010400
+               END-IF                                                   00010500
+           END-IF.                                                      00010600
+                                                                        00010700
+       5000-WRITE-RESULT.                                               00010800
+           COMPUTE WS-NEW-BAL = ACCT-BALANCE + WS-INTEREST - WS-FEE     00010900
+           MOVE ACCT-ID     TO OUT-ACCT-ID                              00011000
+           MOVE WS-INTEREST TO OUT-INTEREST                             00011100
+           MOVE WS-FEE      TO OUT-FEE                                  00011200
+           MOVE WS-NEW-BAL  TO OUT-NEW-BAL                              00011300
+           EVALUATE TRUE                                                00011400
+               WHEN WS-NEW-BAL < ZERO                                   00011500
+                   MOVE 'OD' TO OUT-STATUS                              00011600
+               WHEN WS-FEE > ZERO                                       00011700
+                   MOVE 'FE' TO OUT-STATUS                              00011800
+               WHEN OTHER                                               00011900
+                   MOVE 'OK' TO OUT-STATUS                              00012000
+           END-EVALUATE                                                 00012100
+           WRITE OUT-REC                                                00012200
+           ADD 1 TO WS-WRITE-CNT.                                       00012300
+                                                                        00012400
+       8000-READ.                                                       00012500
+           READ ACCT-FILE                                               00012600
+               AT END                                                   00012700
+                   SET END-OF-ACCOUNTS TO TRUE                          00012800
+           END-READ.                                                    00012900
+                                                                        00013000
+       9000-TERM.                                                       00013100
+           CLOSE ACCT-FILE OUT-FILE                                     00013200
+           DISPLAY 'INTACCR READ=' WS-READ-CNT ' WRITTEN=' WS-WRITE-CNT.00013300

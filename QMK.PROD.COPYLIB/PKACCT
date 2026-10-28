@@ -1,0 +1,11 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      * PACKED ACCOUNT EXTRACT, FIXED LENGTH (RECFM=FB, 33 BYTES)       00000300
+       01  PK-REC.                                                      00000400
+           05  PK-ACCT                 PIC X(10).                       00000500
+           05  PK-BAL                  PIC S9(9)V99 COMP-3.             00000600
+           05  PK-RATE                 PIC 9V9(4) COMP-3.               00000700
+           05  PK-DAYS                 PIC S9(4) COMP.                  00000800
+           05  PK-ADJ                  PIC S9(5)V99.                    00000900
+           05  PK-LIMIT                PIC 9(3)PP.                      00001000
+           05  PK-ITEMS                PIC S9(4) COMP-5.                00001100

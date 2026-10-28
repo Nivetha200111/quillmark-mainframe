@@ -1,0 +1,63 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * CUSTMNT - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   APPLIES CUSTOMER CHANGE REQUESTS (DD CUSTCHG) TO THE CUSTOMER 00000500
+      *   MASTER VSAM KSDS (DD CUSTKSDS) BY RANDOM READ AND REWRITE.    00000600
+      * CHANGE HISTORY (FICTIONAL)                                      00000700
+      *   1998-05-11 MPR  INITIAL VERSION                               00000800
+      *---------------------------------------------------------------- 00000900
+       IDENTIFICATION DIVISION.                                         00001000
+       PROGRAM-ID. CUSTMNT.                                             00001100
+       ENVIRONMENT DIVISION.                                            00001200
+       INPUT-OUTPUT SECTION.                                            00001300
+       FILE-CONTROL.                                                    00001400
+           SELECT CHG-FILE ASSIGN TO CUSTCHG                            00001500
+               FILE STATUS IS WS-CHG-STATUS.                            00001600
+           SELECT CUST-FILE ASSIGN TO CUSTKSDS                          00001700
+               ORGANIZATION IS INDEXED                                  00001800
+               ACCESS MODE IS RANDOM                                    00001900
+               RECORD KEY IS CUST-ID                                    00002000
+               FILE STATUS IS WS-CUST-STATUS.                           00002100
+       DATA DIVISION.                                                   00002200
+       FILE SECTION.                                                    00002300
+       FD  CHG-FILE                                                     00002400
+           RECORDING MODE IS F                                          00002500
+           BLOCK CONTAINS 0 RECORDS                                     00002600
+           LABEL RECORDS ARE STANDARD.                                  00002700
+       COPY CUSTCHG.                                                    00002800
+       FD  CUST-FILE.                                                   00002900
+       COPY CUSTREC.                                                    00003000
+       WORKING-STORAGE SECTION.                                         00003100
+       01  WS-CHG-STATUS               PIC XX.                          00003200
+       01  WS-CUST-STATUS              PIC XX.                          00003300
+       01  WS-EOF                      PIC X VALUE 'N'.                 00003400
+       01  WS-TODAY                    PIC 9(8).                        00003500
+       PROCEDURE DIVISION.                                              00003600
+       0000-MAIN.                                                       00003700
+           ACCEPT WS-TODAY FROM DATE YYYYMMDD                           00003800
+           OPEN INPUT CHG-FILE                                          00003900
+           OPEN I-O CUST-FILE                                           00004000
+           PERFORM UNTIL WS-EOF = 'Y'                                   00004100
+               READ CHG-FILE                                            00004200
+                   AT END MOVE 'Y' TO WS-EOF                            00004300
+                   NOT AT END PERFORM 2000-APPLY                        00004400
+               END-READ                                                 00004500
+           END-PERFORM                                                  00004600
+           CLOSE CHG-FILE CUST-FILE                                     00004700
+           STOP RUN.                                                    00004800
+       2000-APPLY.                                                      00004900
+           MOVE CHG-CUST-ID TO CUST-ID                                  00005000
+           READ CUST-FILE                                               00005100
+               INVALID KEY                                              00005200
+                   DISPLAY 'CUSTMNT NOT FOUND ' CHG-CUST-ID             00005300
+               NOT INVALID KEY                                          00005400
+                   IF CHG-RENAME                                        00005500
+                       MOVE CHG-NAME TO CUST-NAME                       00005600
+                   END-IF                                               00005700
+                   IF CHG-RESEGMENT                                     00005800
+                       MOVE CHG-SEGMENT TO CUST-SEGMENT                 00005900
+                   END-IF                                               00006000
+                   MOVE WS-TODAY TO CUST-LAST-CHANGE                    00006100
+                   REWRITE CUST-REC                                     00006200
+           END-READ.                                                    00006300

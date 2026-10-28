@@ -1,0 +1,75 @@
+      * SYNTHETIC SAMPLE - written for the Diocle hackathon project.    00000100
+      * Fictional company. Not derived from any real system.            00000200
+      *---------------------------------------------------------------- 00000300
+      * PKDPOST - QUILLMARK TRUST & SAVINGS (FICTIONAL)                 00000400
+      *   READS THE PACKED ACCOUNT EXTRACT (DD PKIN, RECFM=FB) AND      00000500
+      *   WRITES ONE POSTING RESULT PER ACCOUNT (DD PKOUT, RECFM=FB).   00000600
+      *   FIELDS ARE COMP-3, BINARY, COMP-5, OVERPUNCH SIGNED DISPLAY   00000700
+      *   AND A P-SCALED LIMIT HELD IN HUNDREDS.                        00000800
+      * CHANGE HISTORY (FICTIONAL)                                      00000900
+      *   1993-06-01 GRT  INITIAL VERSION                               00001000
+      *   1997-02-17 GRT  CREDIT LIMIT HEADROOM                         00001100
+      *   2002-09-30 LMS  ITEM UNITS FROM THE NATIVE BINARY COUNTER     00001200
+      *---------------------------------------------------------------- 00001300
+       IDENTIFICATION DIVISION.                                         00001400
+       PROGRAM-ID. PKDPOST.                                             00001500
+       ENVIRONMENT DIVISION.                                            00001600
+       INPUT-OUTPUT SECTION.                                            00001700
+       FILE-CONTROL.                                                    00001800
+           SELECT PK-FILE ASSIGN TO PKIN                                00001900
+               ORGANIZATION IS SEQUENTIAL                               00002000
+               FILE STATUS IS WS-PK-STATUS.                             00002100
+           SELECT PO-FILE ASSIGN TO PKOUT                               00002200
+               ORGANIZATION IS SEQUENTIAL                               00002300
+               FILE STATUS IS WS-PO-STATUS.                             00002400
+       DATA DIVISION.                                                   00002500
+       FILE SECTION.                                                    00002600
+       FD  PK-FILE                                                      00002700
+           RECORDING MODE IS F                                          00002800
+           BLOCK CONTAINS 0 RECORDS                                     00002900
+           LABEL RECORDS ARE STANDARD.                                  00003000
+       COPY PKACCT.                                                     00003100
+       FD  PO-FILE                                                      00003200
+           RECORDING MODE IS F                                          00003300
+           BLOCK CONTAINS 0 RECORDS                                     00003400
+           LABEL RECORDS ARE STANDARD.                                  00003500
+       COPY PKOUT.                                                      00003600
+       WORKING-STORAGE SECTION.                                         00003700
+       01  WS-PK-STATUS                PIC XX.                          00003800
+       01  WS-PO-STATUS                PIC XX.                          00003900
+       01  WS-EOF-FLAG                 PIC X VALUE 'N'.                 00004000
+           88  END-OF-ACCOUNTS         VALUE 'Y'.                       00004100
+       01  WS-INT                      PIC S9(7)V99 COMP-3.             00004200
+       01  WS-NEW-BAL                  PIC S9(9)V99 COMP-3.             00004300
+       01  WS-READ-CNT                 PIC 9(7) COMP VALUE 0.           00004400
+       PROCEDURE DIVISION.                                              00004500
+       0000-MAIN.                                                       00004600
+           OPEN INPUT PK-FILE                                           00004700
+           OPEN OUTPUT PO-FILE                                          00004800
+           PERFORM 8000-READ                                            00004900
+           PERFORM 2000-POST UNTIL END-OF-ACCOUNTS                      00005000
+           CLOSE PK-FILE PO-FILE                                        00005100
+           DISPLAY 'PKDPOST READ=' WS-READ-CNT                          00005200
+           STOP RUN.                                                    00005300
+                                                                        00005400
+      * INTEREST ROUNDED HALF AWAY FROM ZERO; NEGATIVE DAYS REVERSE IT. 00005500
+      * THE NEW BALANCE TRUNCATES; THE HEADROOM CAN OVERFLOW SILENTLY.  00005600
+       2000-POST.                                                       00005700
+           ADD 1 TO WS-READ-CNT                                         00005800
+           COMPUTE WS-INT ROUNDED =                                     00005900
+               PK-BAL * PK-RATE * PK-DAYS / 365                         00006000
+           COMPUTE WS-NEW-BAL = PK-BAL + WS-INT + PK-ADJ                00006100
+           MOVE PK-ACCT    TO PO-ACCT                                   00006200
+           MOVE WS-INT     TO PO-INT                                    00006300
+           MOVE WS-NEW-BAL TO PO-NEW-BAL                                00006400
+           COMPUTE PO-HEADROOM = PK-LIMIT - WS-NEW-BAL                  00006500
+           COMPUTE PO-ITEM-UNITS = PK-ITEMS * 1000                      00006600
+           COMPUTE PO-REVERSAL = ZERO - PK-ADJ                          00006700
+           WRITE PO-REC                                                 00006800
+           PERFORM 8000-READ.                                           00006900
+                                                                        00007000
+       8000-READ.                                                       00007100
+           READ PK-FILE                                                 00007200
+               AT END                                                   00007300
+                   SET END-OF-ACCOUNTS TO TRUE                          00007400
+           END-READ.                                                    00007500

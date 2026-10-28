@@ -1,0 +1,14 @@
+//* SYNTHETIC SAMPLE - written for the Diocle hackathon project.
+//* Fictional company. Not derived from any real system.
+//QMKINT   PROC ENV=PROD,GEN=+1
+//*-------------------------------------------------------------------
+//* DAILY INTEREST ACCRUAL AND MAINTENANCE FEE
+//*-------------------------------------------------------------------
+//INT010   EXEC PGM=INTACCR
+//STEPLIB  DD DSN=QMK.&ENV..LOADLIB,DISP=SHR
+//ACCTIN   DD DSN=QMK.&ENV..ACCT.EXTRACT.DAILY,DISP=SHR
+//INTOUT   DD DSN=QMK.&ENV..INT.RESULT(&GEN),
+//            DISP=(NEW,CATLG,DELETE),UNIT=SYSDA,
+//            SPACE=(TRK,(50,10),RLSE),
+//            DCB=(RECFM=FB,LRECL=42,BLKSIZE=0)
+//SYSOUT   DD SYSOUT=*
